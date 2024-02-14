@@ -23,6 +23,17 @@ class Room(models.Model):
   def __str__(self):
     return self.name
   
+  def descshort(self):
+    return self.body[0:50]
+  
+  def short_description(self):
+    if self.description:
+      if len(self.description) > 50:
+        return f"{self.description[:50]}..."
+      else:
+        return self.description
+    return ''
+  
 
   
 class Message(models.Model):
@@ -36,4 +47,6 @@ class Message(models.Model):
     ordering = ['-updated', '-created']
 
   def __str__(self):
+    if len(self.body) > 50:
+      return f"{self.body[0:50]}..."
     return self.body[0:50]
