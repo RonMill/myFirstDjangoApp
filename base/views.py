@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm
 from .models import Room, Topic, Message
-from .forms import RoomForm
+from .forms import RoomForm, UserForm
 
 
 # rooms = [
@@ -76,7 +76,7 @@ def home(request):
                               Q(description__icontains=q) |
                               Q(host__username__icontains=q))
 
-  topics = Topic.objects.all()
+  topics = Topic.objects.all()[0:4]
 
   room_count = rooms.count()
 
@@ -160,12 +160,14 @@ def deleteRoom(request, pk):
 
   if request.method == 'POST':
     room.delete()
+    #todo redirect to former page
     return redirect('home')
   return render(request, 'base/delete.html', {'obj': room})
 
 #! Delete Message
 @login_required(login_url="login")
 def deleteMessage(request, pk):
+  # previousPage = request.META.HTTP_REFERER
   message = Message.objects.get(id=pk)
   
   if request.user != message.user:
@@ -173,11 +175,11 @@ def deleteMessage(request, pk):
 
   if request.method == 'POST':
     message.delete()
+    #todo redirect to former page
     return redirect('home')
   return render(request, 'base/delete.html', {'obj': message})
 
 #! userProfile
-
 def userProfile(request, pk):
   user = User.objects.get(id=pk)
   rooms = user.room_set.all()
@@ -185,3 +187,35 @@ def userProfile(request, pk):
   topics = Topic.objects.all()
   context = {'user': user, 'rooms': rooms, 'room_messages': room_messages, 'topics': topics}
   return render(request, 'base/profile.html', context)
+
+#! updateUser
+@login_required(login_url='login')
+def updateUser(request):
+  user = request.user
+  form = UserForm(instance=user)
+
+  if request.method == 'POST':
+    form = UserForm(request.POST, instance=user)
+    if form.is_valid():
+      user = form.save(commit=False)
+      user.username = user.username.lower()
+      user.save()
+      return redirect('user-profile', user.id)
+    else:
+      messages.error(request, 'An error occured during update user')
+
+  context = {'form': form}
+  return render(request, 'base/update-user.html', context)
+
+#! topics
+def topicsPage(request):
+  q = request.GET.get('q') if request.GET.get('q') != None else ''
+  topics = Topic.objects.filter(name__icontains=q)
+  context = {'topics': topics}
+  return render(request, 'base/topics.html', context)
+
+#! activities
+def activitiesPage(request):
+  room_messages = Message.objects.all()
+  context = {'room_messages': room_messages}
+  return render(request, 'base/activities.html', context)
